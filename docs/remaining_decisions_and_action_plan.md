@@ -35,25 +35,23 @@
 
 #### 2.2.1 Secret 관리 전략
 - **권고(Phase 1 파일럿)**: 수동 생성(kubectl) + Git 완전 제외
-- **권고(Phase 2 베타)**: AWS Secrets Manager + External Secrets Operator(ESO)
-- **검토(Phase 3 운영)**: Vault
+- **권고(Phase 2 베타)**: Sealed Secrets(또는 Vault) 기반 GitOps 정착
+- **검토(Phase 3 운영)**: Vault(중앙 집중 + 감사 + 동적 시크릿) 전환
 
 **리포지토리 반영**
 - Secret 예시(커밋 금지): `k8s/secret.example.yaml`
-- External Secrets Operator 연동 예시:
-  - `k8s/external-secrets/clustersecretstore-aws.yaml`
-  - `k8s/external-secrets/externalsecret-bems-secrets.yaml`
+- 온프레미스 전환 설계서(요약): `docs/onprem_kubernetes_deployment_plan.md`
 
 #### 2.2.2 네트워크 토폴로지 확정
-- **권고(Phase 1-2)**: 시나리오 B(AWS 관리형: RDS/ElastiCache/MSK/OpenSearch Service)
+- **권고(Phase 1-2)**: 온프레미스 데이터 서비스(클러스터 내부) + NetworkPolicy 엄격 적용
 - 즉시 작업:
-  - VPC CIDR 확정
-  - SecurityGroup 설계
-  - NetworkPolicy egress를 VPC CIDR 기준으로 업데이트
+  - 온프레미스 네트워크 대역/CIDR 확정(예: 192.168.100.0/24)
+  - 외부 진입(하드웨어 LB 포워딩 vs MetalLB) 결정
+  - NetworkPolicy egress를 “필수 목적지(내부 서비스 + 외부 HTTPS)”로 최소화
 
 **리포지토리 반영**
 - 기본 NetworkPolicy(클러스터 내부 서비스 가정): `k8s/networkpolicy.yaml`
-  - 운영 확정 후 “외부 엔드포인트(CIDR)” 버전으로 추가 분기 권고
+  - 온프레미스 확정 후 네임스페이스 분리(bems-prod/bems-data/bems-storage) 버전으로 추가 분기 권고
 
 ---
 
@@ -84,11 +82,11 @@
 
 ### 4.1 즉시 실행(2주 이내)
 - 인프라 스택 확정 회의 및 **Infrastructure Decision Record(IDR)** 산출
-- Terraform 기본 구조 설계(환경 분리)
-- VPC/서브넷 CIDR 확정(예: 10.0.0.0/16)
+- (온프레미스) kubeadm/Rancher 선택, 외부 진입 방식(NodePort+LB vs MetalLB) 확정
+- (온프레미스) 네트워크 대역/방화벽 정책/내부 DNS 확정
 
 ### 4.2 Phase 1 시작과 함께
-- EKS 프로비저닝
-- 핵심 Add-ons 설치(NGINX Ingress / kube-prometheus-stack / External Secrets Operator)
+- (온프레미스) Kubernetes 프로비저닝(kubeadm) + Calico
+- 핵심 Add-ons 설치(NGINX Ingress / kube-prometheus-stack / Sealed Secrets / cert-manager)
 - 네임스페이스/기본 매니페스트 적용
 

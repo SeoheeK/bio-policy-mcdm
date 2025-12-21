@@ -16,3 +16,4 @@
 - **WBS/간트(표준)**: `docs/project/WBS_and_Gantt.md` (상세: `docs/project/WBS.csv`)
 - **데이터 표준(지표/온톨로지)**: `docs/data/README.md`
 - **운영 결정/액션 플랜(요약)**: `docs/remaining_decisions_and_action_plan.md`
+- **온프레미스 Kubernetes 배포(확정판 초안)**: `docs/onprem_kubernetes_deployment_plan.md`
