@@ -1,0 +1,4 @@
+timestamp,area,action,command_or_context,error_type,error_summary,error_details,status,follow_up
+2025-12-21T11:09:37+0000,backend,pytest,/workspace/backend,DependencyMissing,email-validator 미설치로 pytest 수집 실패,"pydantic EmailStr 사용 중 email_validator 모듈을 찾지 못해 ImportError 발생 (\"email-validator is not installed\")",resolved(2025-12-21T11:11:03+0000),pydantic[email] 추가 및 재설치 후 pytest 통과
+2025-12-21T11:10:26+0000,backend,pytest,/workspace/backend,TestFailure,bcrypt 해시 과정에서 ValueError 발생,"passlib(bcrypt) 내부 wrap-bug 탐지 로직 중 bcrypt가 72바이트 제한으로 ValueError(\"password cannot be longer than 72 bytes\") 발생",resolved(2025-12-21T11:11:03+0000),bcrypt 대신 pbkdf2_sha256로 전환 후 pytest 통과
+2025-12-21T11:10:26+0000,backend,pytest,/workspace/backend,TestFailure,SQLite in-memory 테스트에서 users 테이블 미존재,"sqlite3 in-memory DB가 커넥션별로 분리되어 create_all 이후 요청 처리 시 다른 커넥션에서 'no such table: users' 발생",resolved(2025-12-21T11:11:03+0000),StaticPool + check_same_thread=False 적용 후 pytest 통과
