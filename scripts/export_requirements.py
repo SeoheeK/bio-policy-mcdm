@@ -289,16 +289,34 @@ def write_excel(requirements_xlsx: Path, reqs: List[Requirement], trace_xlsx: Pa
     ws2.title = "traceability"
 
     trace_headers = list(trace_rows[0].keys()) if trace_rows else [
+        # requirement identity (pivot-friendly)
         "requirement_id",
         "requirement_title",
+        "requirement_type",
+        "requirement_group",
+        "priority_p",
+        "moscow",
+        "severity",
+        "section_path",
+        # relationships
         "linked_requirement_ids",
+        # Obsidian work items (epic/story)
+        "obsidian_epic_key",
+        "obsidian_epic_link",
+        "obsidian_story_key",
+        "obsidian_story_link",
+        # design/test artifacts
         "design_artifact_id",
         "design_artifact_link",
         "test_case_id",
         "test_type",
         "test_link",
+        # dashboard status fields (pivot-friendly)
+        "design_status",
+        "dev_status",
+        "test_status",
+        "overall_status",
         "owner",
-        "status",
         "notes",
     ]
     ws2.append(trace_headers)
@@ -324,14 +342,27 @@ def build_traceability_template(
             {
                 "requirement_id": r.id,
                 "requirement_title": r.title,
+                "requirement_type": r.type,
+                "requirement_group": r.group,
+                "priority_p": r.priority_p,
+                "moscow": r.moscow,
+                "severity": r.severity,
+                "section_path": r.section_path,
                 "linked_requirement_ids": linked,
+                "obsidian_epic_key": "",
+                "obsidian_epic_link": "",
+                "obsidian_story_key": "",
+                "obsidian_story_link": "",
                 "design_artifact_id": "",
                 "design_artifact_link": "",
                 "test_case_id": test_case_id,
                 "test_type": test_type,
                 "test_link": "",
+                "design_status": "",
+                "dev_status": "",
+                "test_status": "",
+                "overall_status": "",
                 "owner": "",
-                "status": "",
                 "notes": "",
             }
         )
