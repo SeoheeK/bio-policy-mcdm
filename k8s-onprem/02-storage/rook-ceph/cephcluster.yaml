@@ -1,0 +1,43 @@
+apiVersion: ceph.rook.io/v1
+kind: CephCluster
+metadata:
+  name: rook-ceph
+  namespace: rook-ceph
+spec:
+  cephVersion:
+    # 운영 환경에서 지원되는 버전으로 고정 권고
+    image: quay.io/ceph/ceph:v18.2.2
+    allowUnsupported: false
+
+  dataDirHostPath: /var/lib/rook
+
+  mon:
+    count: 3
+    allowMultiplePerNode: false
+
+  mgr:
+    count: 2
+    allowMultiplePerNode: false
+
+  dashboard:
+    enabled: true
+
+  monitoring:
+    enabled: true
+
+  network:
+    # 필요 시 hostNetwork 또는 멀티 네트워크 설정(현장 정책에 따름)
+    provider: host
+
+  storage:
+    # NOTE: 실제 장비에 맞게 반드시 수정하세요.
+    useAllNodes: true
+    useAllDevices: false
+    # OSD로 사용할 디바이스만 명시(예시)
+    devices:
+      - name: /dev/sdb
+      - name: /dev/sdc
+
+  disruptionManagement:
+    managePodBudgets: true
+

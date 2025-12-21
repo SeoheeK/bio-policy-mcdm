@@ -1,0 +1,40 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: bems-config
+  namespace: bems-prod
+data:
+  ENV: "production"
+  LOG_LEVEL: "INFO"
+  LOG_FORMAT: "json"
+
+  # PostgreSQL (CloudNativePG 기본 RW 서비스: <clustername>-rw)
+  POSTGRES_HOST: "bems-postgres-rw.bems-data.svc.cluster.local"
+  POSTGRES_PORT: "5432"
+  POSTGRES_DB: "bems"
+  POSTGRES_USER: "bems_user"
+
+  # Redis (Bitnami redis release: bems-redis)
+  REDIS_HOST: "bems-redis-master.bems-data.svc.cluster.local"
+  REDIS_PORT: "6379"
+
+  # Kafka (Strimzi: <name>-kafka-bootstrap)
+  KAFKA_BOOTSTRAP_SERVERS: "kafka-kafka-bootstrap.bems-data.svc.cluster.local:9092"
+
+  # MinIO (Helm release: bems-minio)
+  S3_ENDPOINT: "http://bems-minio.bems-storage.svc.cluster.local:9000"
+  S3_BUCKET: "bems-data-lake"
+  S3_REGION: "us-east-1"  # MinIO에서는 의미 없지만 SDK 호환성용
+
+  # 성능/가드레일
+  MAX_WORKERS: "4"
+  DB_POOL_SIZE: "20"
+  CACHE_TTL_SECONDS: "300"
+  SIMULATION_DAILY_LIMIT: "100"
+  SIMULATION_CONCURRENT_LIMIT: "5"
+  LLM_DAILY_BUDGET_USD: "100.0"
+
+  # 메트릭
+  METRICS_ENABLED: "true"
+  METRICS_PORT: "9090"
+

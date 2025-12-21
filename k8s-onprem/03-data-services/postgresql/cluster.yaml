@@ -1,0 +1,43 @@
+apiVersion: postgresql.cnpg.io/v1
+kind: Cluster
+metadata:
+  name: bems-postgres
+  namespace: bems-data
+spec:
+  instances: 3
+  imageName: ghcr.io/cloudnative-pg/postgresql:16.4
+
+  primaryUpdateStrategy: unsupervised
+
+  storage:
+    storageClass: rook-ceph-block
+    size: 500Gi
+
+  resources:
+    requests:
+      cpu: "2"
+      memory: 8Gi
+    limits:
+      cpu: "4"
+      memory: 16Gi
+
+  bootstrap:
+    initdb:
+      database: bems
+      owner: bems_user
+      secret:
+        name: bems-postgres-app
+
+---
+# 애플리케이션 접속용 계정/패스워드(예시)
+# NOTE: 실제로는 SealedSecret로 관리 권고.
+apiVersion: v1
+kind: Secret
+metadata:
+  name: bems-postgres-app
+  namespace: bems-data
+type: kubernetes.io/basic-auth
+stringData:
+  username: bems_user
+  password: REPLACE_ME
+

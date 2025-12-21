@@ -1,0 +1,48 @@
+##
+# kube-prometheus-stack (on-prem) values
+#
+# 목적:
+# - bems-prod 네임스페이스에 있는 ServiceMonitor/PrometheusRule을 "확실히" 로드/스크랩
+# - 온프레미스에서 흔한 케이스(별도 앱 네임스페이스 분리)를 기본 지원
+#
+# 주의:
+# - 아래 설정은 ServiceMonitor/PrometheusRule을 "라벨로 제한하지 않고" 넓게 선택하도록 구성되어 있습니다.
+#   (재현성/편의 우선) 보안/운영 정책에 따라 selector를 더 엄격히 좁히세요.
+##
+
+prometheus:
+  prometheusSpec:
+    # ServiceMonitor/PodMonitor 선택 정책
+    # - false: "Helm release 라벨만" 고집하지 않고, 클러스터에 존재하는 ServiceMonitor를 수집 가능
+    serviceMonitorSelectorNilUsesHelmValues: false
+    podMonitorSelectorNilUsesHelmValues: false
+    probeSelectorNilUsesHelmValues: false
+
+    # PrometheusRule 선택 정책
+    ruleSelectorNilUsesHelmValues: false
+
+    # 다른 네임스페이스의 ServiceMonitor/Rule을 읽도록 허용
+    # {} = 모든 네임스페이스
+    serviceMonitorNamespaceSelector: {}
+    podMonitorNamespaceSelector: {}
+    ruleNamespaceSelector: {}
+
+    # 운영 환경에서 retention은 저장소/용량에 맞춰 조정
+    retention: 15d
+
+    # on-prem에서는 PV 사용을 권고(예시). 스토리지클래스는 환경에 맞게 조정하세요.
+    storageSpec:
+      volumeClaimTemplate:
+        spec:
+          storageClassName: rook-ceph-block
+          accessModes: ["ReadWriteOnce"]
+          resources:
+            requests:
+              storage: 200Gi
+
+grafana:
+  enabled: true
+
+alertmanager:
+  enabled: true
+

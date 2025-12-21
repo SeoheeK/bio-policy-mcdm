@@ -1,0 +1,89 @@
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: bems-api-netpol
+  namespace: bems
+spec:
+  podSelector:
+    matchLabels:
+      app: bems-api
+  policyTypes: ["Ingress", "Egress"]
+
+  ingress:
+    # Ingress Controller(nginx)로부터 HTTP 허용
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: ingress-nginx
+      ports:
+        - protocol: TCP
+          port: 8000
+
+    # Prometheus(모니터링 네임스페이스)로부터 metrics 허용
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: monitoring
+      ports:
+        - protocol: TCP
+          port: 9090
+
+  egress:
+    # DNS(CoreDNS) 허용
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: kube-system
+          podSelector:
+            matchLabels:
+              k8s-app: kube-dns
+      ports:
+        - protocol: UDP
+          port: 53
+        - protocol: TCP
+          port: 53
+
+    # DB/캐시/검색(클러스터 내부 서비스) - 운영 환경에 맞게 조정
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: bems
+      ports:
+        - protocol: TCP
+          port: 5432
+        - protocol: TCP
+          port: 27017
+        - protocol: TCP
+          port: 6379
+        - protocol: TCP
+          port: 7687
+        - protocol: TCP
+          port: 9200
+        - protocol: TCP
+          port: 6333
+        - protocol: TCP
+          port: 9000
+
+    # Kafka(예: kafka 네임스페이스) 허용 - 실제 네임스페이스/라벨에 맞게 수정
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: kafka
+          podSelector:
+            matchLabels:
+              app: kafka
+      ports:
+        - protocol: TCP
+          port: 9092
+
+    # 외부 API(LLM 등) 443 허용(사설대역 제외)
+    - to:
+        - ipBlock:
+            cidr: 0.0.0.0/0
+            except:
+              - 10.0.0.0/8
+              - 172.16.0.0/12
+              - 192.168.0.0/16
+      ports:
+        - protocol: TCP
+          port: 443

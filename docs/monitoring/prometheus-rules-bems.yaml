@@ -1,0 +1,268 @@
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: bems-alerts
+  namespace: monitoring
+spec:
+  groups:
+    #
+    # NOTE
+    # - 본 파일은 "운영 스택별"로 알림을 분리해 두었습니다.
+    # - 특정 스택의 exporter/metric이 없다면 해당 alert expr는 빈 벡터가 되어 발화하지 않습니다.
+    # - 실제 라벨(job/namespace/service/route/ingress 등)은 설치 환경에 맞게 조정하세요.
+    #
+    # -----------------------------
+    # 1) API / Ingress / Gateway
+    # -----------------------------
+    - name: bems.api.nginx-ingress
+      rules:
+        # NGINX Ingress Controller (community) metric: nginx_ingress_controller_requests
+        - alert: BEMSApiHigh5xxRate_NginxIngress
+          expr: |
+            (
+              sum(rate(nginx_ingress_controller_requests{status=~"5.."}[5m]))
+              /
+              sum(rate(nginx_ingress_controller_requests[5m]))
+            ) > 0.01
+          for: 10m
+          labels:
+            severity: page
+          annotations:
+            summary: "API 5xx 비율이 높습니다(nginx-ingress, >1%)"
+            description: "nginx_ingress_controller_requests 기준 10분 이상 5xx 비율 1% 초과. 최근 배포/의존성(DB·검색)·HPA 확인."
+            runbook_url: "RUNBOOK_URL_PLACEHOLDER"
+
+        - alert: BEMSApiLatencyP95High_NginxIngress
+          expr: |
+            histogram_quantile(
+              0.95,
+              sum by (le) (rate(nginx_ingress_controller_request_duration_seconds_bucket[5m]))
+            ) > 1.5
+          for: 15m
+          labels:
+            severity: page
+          annotations:
+            summary: "API p95 지연이 높습니다(nginx-ingress, >1.5s)"
+            description: "nginx_ingress_controller_request_duration_seconds_bucket 기준 15분 이상 p95 1.5초 초과."
+
+        - alert: BEMSApiHigh429Rate_NginxIngress
+          expr: |
+            sum(rate(nginx_ingress_controller_requests{status="429"}[5m])) > 5
+          for: 10m
+          labels:
+            severity: warn
+          annotations:
+            summary: "429(rate limit) 응답 증가(nginx-ingress)"
+            description: "5분 평균 초당 5건 초과가 10분 지속. 클라이언트/봇 트래픽 및 레이트리밋 설정 확인."
+
+    - name: bems.api.istio-envoy
+      rules:
+        # Istio Envoy metric: istio_requests_total / istio_request_duration_milliseconds_bucket
+        - alert: BEMSApiHigh5xxRate_Istio
+          expr: |
+            (
+              sum(rate(istio_requests_total{response_code=~"5.."}[5m]))
+              /
+              sum(rate(istio_requests_total[5m]))
+            ) > 0.01
+          for: 10m
+          labels:
+            severity: page
+          annotations:
+            summary: "API 5xx 비율이 높습니다(Istio, >1%)"
+            description: "istio_requests_total 기준 10분 이상 5xx 비율 1% 초과. upstream(서비스/DB/검색) 지연 및 오류 확인."
+
+        - alert: BEMSApiLatencyP95High_Istio
+          expr: |
+            (
+              histogram_quantile(
+                0.95,
+                sum by (le) (rate(istio_request_duration_milliseconds_bucket[5m]))
+              )
+              / 1000
+            ) > 1.5
+          for: 15m
+          labels:
+            severity: page
+          annotations:
+            summary: "API p95 지연이 높습니다(Istio, >1.5s)"
+            description: "istio_request_duration_milliseconds_bucket 기준 15분 이상 p95 1.5초 초과."
+
+    - name: bems.api.kong
+      rules:
+        # Kong (kuma/otel/various exporters) metric names differ.
+        # 가장 흔한 패턴 2개를 모두 커버: kong_http_status / kong_http_requests_total
+        - alert: BEMSApiHigh5xxRate_Kong
+          expr: |
+            (
+              (
+                sum(rate(kong_http_status{code=~"5.."}[5m]))
+                /
+                sum(rate(kong_http_status[5m]))
+              )
+              OR
+              (
+                sum(rate(kong_http_requests_total{status=~"5.."}[5m]))
+                /
+                sum(rate(kong_http_requests_total[5m]))
+              )
+            ) > 0.01
+          for: 10m
+          labels:
+            severity: page
+          annotations:
+            summary: "API 5xx 비율이 높습니다(Kong, >1%)"
+            description: "Kong exporter metric 기준 10분 이상 5xx 비율 1% 초과. 라우트/업스트림 오류 및 최근 변경 확인."
+
+    # -----------------------------
+    # 2) Kubernetes 플랫폼 상태
+    # -----------------------------
+    - name: bems.kubernetes
+      rules:
+        - alert: BEMSPodCrashLooping
+          expr: |
+            max_over_time(kube_pod_container_status_waiting_reason{reason="CrashLoopBackOff"}[10m]) > 0
+          for: 10m
+          labels:
+            severity: page
+          annotations:
+            summary: "CrashLoopBackOff 발생"
+            description: "10분 이상 CrashLoopBackOff 지속. 최근 배포/환경변수/시크릿 변경, 프로브 실패, OOMKilled 확인."
+
+        - alert: BEMSPodHighRestarts
+          expr: |
+            increase(kube_pod_container_status_restarts_total[15m]) >= 3
+          for: 0m
+          labels:
+            severity: warn
+          annotations:
+            summary: "컨테이너 재시작 급증"
+            description: "15분 내 재시작 3회 이상. 원인(OOMKilled/의존성 타임아웃/프로브) 확인."
+
+        - alert: BEMSDeploymentReplicasMismatch
+          expr: |
+            (
+              kube_deployment_status_replicas_available
+              /
+              clamp_min(kube_deployment_spec_replicas, 1)
+            ) < 0.9
+          for: 15m
+          labels:
+            severity: page
+          annotations:
+            summary: "Deployment 가용 replicas 비율 저하"
+            description: "15분 이상 가용 replicas 비율이 90% 미만. 노드/스케줄링/이미지 pull/프로브 확인."
+
+    # -----------------------------
+    # 3) Databases / Cache
+    # -----------------------------
+    - name: bems.database.postgres-exporter
+      rules:
+        # postgres_exporter 제공 metric: pg_settings_max_connections, pg_stat_activity_count
+        - alert: BEMSPostgresTooManyConnections
+          expr: |
+            (
+              sum(pg_stat_activity_count)
+              /
+              sum(pg_settings_max_connections)
+            ) > 0.85
+          for: 10m
+          labels:
+            severity: page
+          annotations:
+            summary: "PostgreSQL 연결 수가 임계치에 근접"
+            description: "10분 이상 max_connections의 85% 초과. 커넥션 풀/누수/슬로우쿼리 점검."
+
+    - name: bems.cache.redis-exporter
+      rules:
+        # redis_exporter 제공 metric: redis_keyspace_hits_total, redis_keyspace_misses_total
+        - alert: BEMSRedisLowHitRate
+          expr: |
+            (
+              rate(redis_keyspace_hits_total[5m])
+              /
+              clamp_min(rate(redis_keyspace_hits_total[5m]) + rate(redis_keyspace_misses_total[5m]), 1e-9)
+            ) < 0.7
+          for: 30m
+          labels:
+            severity: warn
+          annotations:
+            summary: "Redis 캐시 hit rate 낮음(<70%)"
+            description: "30분 이상 캐시 hit rate 저하. 캐시 키/TTL/권한 컨텍스트 분리 여부 점검."
+
+    # -----------------------------
+    # 4) Search (OpenSearch)
+    # -----------------------------
+    - name: bems.search.opensearch-exporter
+      rules:
+        # OpenSearch exporter는 구현체별로 metric명이 다릅니다.
+        # 가장 일반적인 패턴: opensearch_cluster_health_status{color="red"} 또는 elasticsearch_cluster_health_status{color="red"}
+        - alert: BEMSOpenSearchClusterRed
+          expr: |
+            (
+              max(opensearch_cluster_health_status{color="red"})
+              OR
+              max(elasticsearch_cluster_health_status{color="red"})
+            ) == 1
+          for: 5m
+          labels:
+            severity: page
+          annotations:
+            summary: "OpenSearch/Elasticsearch 클러스터 RED"
+            description: "샤드 할당 실패/노드 장애 가능. 스토리지, JVM, 노드 상태 확인."
+
+    # -----------------------------
+    # 5) Messaging (Kafka)
+    # -----------------------------
+    - name: bems.messaging.kafka
+      rules:
+        # kafka_exporter: kafka_consumergroup_lag
+        - alert: BEMSKafkaConsumerLagHigh_KafkaExporter
+          expr: |
+            max(kafka_consumergroup_lag) > 10000
+          for: 10m
+          labels:
+            severity: page
+          annotations:
+            summary: "Kafka consumer lag 높음(kafka_exporter, >10,000)"
+            description: "10분 이상 lag 지속. 워커 장애/리소스 부족/외부 의존성 지연 확인."
+
+        # kminion: kminion_kafka_consumergroup_lag
+        - alert: BEMSKafkaConsumerLagHigh_Kminion
+          expr: |
+            max(kminion_kafka_consumergroup_lag) > 10000
+          for: 10m
+          labels:
+            severity: page
+          annotations:
+            summary: "Kafka consumer lag 높음(kminion, >10,000)"
+            description: "10분 이상 lag 지속. 워커 장애/리소스 부족/외부 의존성 지연 확인."
+
+    # -----------------------------
+    # 6) Security / External probes
+    # -----------------------------
+    - name: bems.security
+      rules:
+        # blackbox-exporter: probe_ssl_earliest_cert_expiry
+        - alert: BEMSTLSCertExpiringSoon
+          expr: |
+            (probe_ssl_earliest_cert_expiry - time()) < 86400 * 14
+          for: 1h
+          labels:
+            severity: warn
+          annotations:
+            summary: "TLS 인증서 만료 임박(14일 이내)"
+            description: "외부 엔드포인트 인증서 갱신 필요(blackbox-exporter 기반)."
+            runbook_url: "RUNBOOK_URL_PLACEHOLDER"
+
+        # 애플리케이션 커스텀 메트릭(예시): bems_auth_login_fail_total
+        # 실제 서비스에서 노출하는 메트릭명으로 변경 필요.
+        - alert: BEMSAuthHighFailedLogins
+          expr: |
+            sum(rate(bems_auth_login_fail_total[5m])) > 2
+          for: 10m
+          labels:
+            severity: warn
+          annotations:
+            summary: "로그인 실패 급증(브루트포스 의심)"
+            description: "5분 평균 초당 2건 초과가 10분 지속. WAF/차단/계정 잠금 정책 확인."

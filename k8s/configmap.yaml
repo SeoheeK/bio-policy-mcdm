@@ -1,0 +1,49 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: bems-config
+  namespace: bems
+data:
+  # 환경 설정
+  ENV: "production"
+  LOG_LEVEL: "INFO"
+  LOG_FORMAT: "json"
+
+  # NOTE: envFrom(ConfigMap/Secret)만으로는 ${VAR} 치환이 되지 않습니다.
+  # 따라서 DSN은 Deployment에서 env.value의 $(VAR) 치환을 사용해 구성하거나,
+  # 애플리케이션에서 host/port/user/password를 조합하도록 구현해야 합니다.
+  #
+  # 여기서는 base 정보(host/port/db/user)만 ConfigMap에 두고,
+  # password는 Secret에서 주입하는 구성을 권고합니다.
+  POSTGRES_HOST: "postgres.bems.svc.cluster.local"
+  POSTGRES_PORT: "5432"
+  POSTGRES_DB: "bems"
+  POSTGRES_USER: "bems_user"
+
+  MONGODB_HOST: "mongodb.bems.svc.cluster.local"
+  MONGODB_PORT: "27017"
+  MONGODB_DB: "bems_documents"
+  MONGODB_USER: "bems_user"
+
+  NEO4J_URI: "bolt://neo4j.bems.svc.cluster.local:7687"
+  REDIS_HOST: "redis.bems.svc.cluster.local"
+  REDIS_PORT: "6379"
+
+  OPENSEARCH_HOSTS: "http://opensearch.bems.svc.cluster.local:9200"
+  QDRANT_HOST: "qdrant.bems.svc.cluster.local"
+  QDRANT_PORT: "6333"
+  MINIO_ENDPOINT: "minio.bems.svc.cluster.local:9000"
+
+  # 성능 설정
+  MAX_WORKERS: "4"
+  DB_POOL_SIZE: "20"
+  CACHE_TTL_SECONDS: "300"
+
+  # 메트릭
+  METRICS_ENABLED: "true"
+  METRICS_PORT: "9090"
+
+  # 가드레일
+  SIMULATION_DAILY_LIMIT: "100"
+  SIMULATION_CONCURRENT_LIMIT: "5"
+  LLM_DAILY_BUDGET_USD: "100.0"
