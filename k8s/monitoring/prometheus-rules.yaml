@@ -1,0 +1,238 @@
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: bems-alerts
+  namespace: bems
+  labels:
+    release: kube-prometheus-stack
+spec:
+  groups:
+    - name: bems.api
+      interval: 30s
+      rules:
+        - alert: BEMSAPIHighErrorRate
+          expr: |
+            (
+              sum(rate(bems_api_http_requests_total{status_code=~"5.."}[5m]))
+              /
+              clamp_min(sum(rate(bems_api_http_requests_total[5m])), 1e-9)
+            ) > 0.05
+          for: 5m
+          labels:
+            severity: critical
+            service: bems-api
+          annotations:
+            summary: "BEMS API high error rate (> 5%)"
+            description: "API error rate is {{ $value | humanizePercentage }} over the last 5 minutes"
+
+        - alert: BEMSAPIHighLatency
+          expr: |
+            histogram_quantile(
+              0.95,
+              sum by (le, endpoint) (rate(bems_api_http_request_duration_seconds_bucket[5m]))
+            ) > 3
+          for: 10m
+          labels:
+            severity: warning
+            service: bems-api
+          annotations:
+            summary: "BEMS API high latency (p95 > 3s)"
+            description: "API p95 latency is {{ $value }}s for endpoint {{ $labels.endpoint }}"
+
+        # NOTE: up{job="..."}는 환경마다 job 라벨이 달라 오탐/미탐이 큼.
+        # 가용성은 kube-state-metrics 기반으로 판단(Deployment replicas).
+        - alert: BEMSAPILowAvailability
+          expr: |
+            (
+              kube_deployment_status_replicas_available{namespace="bems", deployment="bems-api"}
+              /
+              clamp_min(kube_deployment_spec_replicas{namespace="bems", deployment="bems-api"}, 1)
+            ) < 0.75
+          for: 5m
+          labels:
+            severity: critical
+            service: bems-api
+          annotations:
+            summary: "BEMS API low availability (< 75%)"
+            description: "Only {{ $value | humanizePercentage }} of API replicas are available"
+
+    - name: bems.database
+      interval: 60s
+      rules:
+        - alert: BEMSPostgreSQLPoolExhausted
+          expr: |
+            (
+              bems_db_connection_pool_size{database="postgresql",state="active"}
+              /
+              clamp_min(
+                (bems_db_connection_pool_size{database="postgresql",state="active"}
+                 + bems_db_connection_pool_size{database="postgresql",state="idle"}),
+                1e-9
+              )
+            ) > 0.9
+          for: 5m
+          labels:
+            severity: warning
+            service: bems-database
+          annotations:
+            summary: "PostgreSQL connection pool nearly exhausted (> 90%)"
+            description: "{{ $value | humanizePercentage }} of connections are active"
+
+        - alert: BEMSSlowQueries
+          expr: |
+            histogram_quantile(
+              0.95,
+              sum by (le, database) (rate(bems_db_query_duration_seconds_bucket[5m]))
+            ) > 1
+          for: 10m
+          labels:
+            severity: warning
+            service: bems-database
+          annotations:
+            summary: "Database slow queries detected (p95 > 1s)"
+            description: "{{ $labels.database }} query p95 latency is {{ $value }}s"
+
+    - name: bems.crawler
+      interval: 60s
+      rules:
+        - alert: BEMSCrawlerHighFailureRate
+          expr: |
+            (
+              sum(rate(bems_crawler_documents_collected_total{status="failed"}[1h]))
+              /
+              clamp_min(sum(rate(bems_crawler_documents_collected_total[1h])), 1e-9)
+            ) > 0.1
+          for: 30m
+          labels:
+            severity: warning
+            service: bems-crawler
+          annotations:
+            summary: "Crawler high failure rate (> 10%)"
+            description: "{{ $value | humanizePercentage }} of crawling attempts failed in the last hour"
+
+        - alert: BEMSCrawlerNoData
+          expr: |
+            sum(increase(bems_crawler_documents_collected_total{status="success"}[6h])) == 0
+          for: 15m
+          labels:
+            severity: critical
+            service: bems-crawler
+          annotations:
+            summary: "No documents collected in the last 6 hours"
+            description: "Crawler may be stuck or failing silently"
+
+    - name: bems.simulation
+      interval: 60s
+      rules:
+        - alert: BEMSSimulationHighFailureRate
+          expr: |
+            (
+              sum(rate(bems_simulation_executions_total{status="failed"}[1h]))
+              /
+              clamp_min(sum(rate(bems_simulation_executions_total[1h])), 1e-9)
+            ) > 0.2
+          for: 30m
+          labels:
+            severity: warning
+            service: bems-simulation
+          annotations:
+            summary: "Simulation high failure rate (> 20%)"
+            description: "{{ $value | humanizePercentage }} of simulations failed in the last hour"
+
+        # NOTE: bems_simulation_duration_seconds는 Histogram으로 설계됨.
+        # '2시간 이상 실행중'을 직접 감지하려면 별도 Gauge(예: bems_simulation_in_progress / running_seconds)가 필요.
+        - alert: BEMSSimulationDurationP95High
+          expr: |
+            histogram_quantile(
+              0.95,
+              sum by (le, model_name) (rate(bems_simulation_duration_seconds_bucket[1h]))
+            ) > 1800
+          for: 30m
+          labels:
+            severity: warning
+            service: bems-simulation
+          annotations:
+            summary: "Simulation duration p95 high (p95 > 30m)"
+            description: "Model {{ $labels.model_name }} p95 duration is {{ $value | humanizeDuration }}"
+
+    - name: bems.llm
+      interval: 300s
+      rules:
+        - alert: BEMSLLMBudgetExceeded
+          expr: |
+            sum(increase(bems_llm_cost_usd_total[24h])) > 100
+          labels:
+            severity: critical
+            service: bems-llm
+          annotations:
+            summary: "Daily LLM budget exceeded ($100)"
+            description: "LLM cost in the last 24h: ${{ $value }}"
+
+        - alert: BEMSLLMBudgetWarning
+          expr: |
+            sum(increase(bems_llm_cost_usd_total[24h])) > 80
+          labels:
+            severity: warning
+            service: bems-llm
+          annotations:
+            summary: "LLM budget at 80% ($80 of $100)"
+            description: "LLM cost in the last 24h: ${{ $value }}"
+
+    - name: bems.queue
+      interval: 60s
+      rules:
+        - alert: BEMSQueueHighLag
+          expr: |
+            max(bems_queue_lag) > 1000
+          for: 10m
+          labels:
+            severity: warning
+            service: bems-queue
+          annotations:
+            summary: "Queue consumer lag is high (> 1000 messages)"
+            description: "Queue {{ $labels.queue_name }} lag: {{ $value }} messages"
+
+        - alert: BEMSQueueDLQAccumulating
+          expr: |
+            increase(bems_queue_messages_total{status="failed"}[1h]) > 50
+          labels:
+            severity: warning
+            service: bems-queue
+          annotations:
+            summary: "Failed messages accumulating (> 50 in 1h)"
+            description: "{{ $value }} messages failed in the last hour (DLQ 증가 가능)"
+
+    - name: bems.resources
+      interval: 60s
+      rules:
+        - alert: BEMSPodRestartingTooOften
+          expr: |
+            increase(kube_pod_container_status_restarts_total{namespace="bems"}[1h]) > 5
+          labels:
+            severity: warning
+            service: bems-infrastructure
+          annotations:
+            summary: "Pod restarting frequently (> 5 times/hour)"
+            description: "Pod {{ $labels.pod }} has restarted {{ $value }} times in the last hour"
+
+        - alert: BEMSPodOOMKilled
+          expr: |
+            kube_pod_container_status_last_terminated_reason{namespace="bems",reason="OOMKilled"} == 1
+          labels:
+            severity: critical
+            service: bems-infrastructure
+          annotations:
+            summary: "Pod killed by OOM"
+            description: "Pod {{ $labels.pod }} was OOMKilled. Consider increasing memory limits."
+
+        - alert: BEMSPodCPUThrottling
+          expr: |
+            rate(container_cpu_cfs_throttled_seconds_total{namespace="bems"}[5m]) > 0.25
+          for: 10m
+          labels:
+            severity: warning
+            service: bems-infrastructure
+          annotations:
+            summary: "Pod CPU throttling (> 25%)"
+            description: "Pod {{ $labels.pod }} is being CPU throttled {{ $value | humanizePercentage }} of the time"
+

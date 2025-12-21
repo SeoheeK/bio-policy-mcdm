@@ -1,0 +1,55 @@
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: bems-api
+  namespace: bems
+  labels:
+    app: bems-api
+    # NOTE: kube-prometheus-stack 설치 시 보통 release 라벨로 선택합니다.
+    # 실제 Prometheus의 serviceMonitorSelector에 맞게 수정하세요.
+    release: kube-prometheus-stack
+spec:
+  selector:
+    matchLabels:
+      app: bems-api
+  namespaceSelector:
+    matchNames: ["bems"]
+  endpoints:
+    - port: metrics
+      path: /metrics
+      interval: 30s
+      scrapeTimeout: 10s
+      metricRelabelings:
+        - sourceLabels: [__name__]
+          regex: "go_.*"
+          action: drop
+        - targetLabel: service
+          replacement: bems-api
+        - targetLabel: environment
+          replacement: production
+
+---
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: bems-worker
+  namespace: bems
+  labels:
+    app: bems-worker
+    release: kube-prometheus-stack
+spec:
+  selector:
+    matchLabels:
+      app: bems-worker
+  namespaceSelector:
+    matchNames: ["bems"]
+  endpoints:
+    - port: metrics
+      path: /metrics
+      interval: 30s
+      scrapeTimeout: 10s
+      metricRelabelings:
+        - targetLabel: service
+          replacement: bems-worker
+        - targetLabel: environment
+          replacement: production

@@ -1,0 +1,90 @@
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: bems-worker
+  namespace: bems
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: bems-worker
+  namespace: bems
+  labels:
+    app: bems-worker
+    component: worker
+spec:
+  replicas: 5
+  selector:
+    matchLabels:
+      app: bems-worker
+  template:
+    metadata:
+      labels:
+        app: bems-worker
+        component: worker
+        version: v1.0.0
+    spec:
+      serviceAccountName: bems-worker
+      containers:
+        - name: worker
+          image: bems/worker:1.0.0
+          imagePullPolicy: IfNotPresent
+          command: ["python", "-m", "modules.worker.consumer"]
+          args:
+            - "--concurrency=4"
+            - "--queue=documents,simulations"
+          ports:
+            - name: metrics
+              containerPort: 9090
+              protocol: TCP
+          envFrom:
+            - configMapRef:
+                name: bems-config
+            - secretRef:
+                name: bems-secrets
+          env:
+            - name: WORKER_TYPE
+              value: "kafka_consumer"
+            - name: KAFKA_BOOTSTRAP_SERVERS
+              value: "kafka.kafka.svc.cluster.local:9092"
+            - name: CONSUMER_GROUP_ID
+              value: "bems-workers"
+          resources:
+            requests:
+              cpu: 1000m
+              memory: 2Gi
+            limits:
+              cpu: 4000m
+              memory: 8Gi
+          livenessProbe:
+            exec:
+              command: ["python", "-m", "modules.worker.healthcheck"]
+            initialDelaySeconds: 30
+            periodSeconds: 30
+            timeoutSeconds: 10
+            failureThreshold: 3
+          volumeMounts:
+            - name: tmp
+              mountPath: /tmp
+      volumes:
+        - name: tmp
+          emptyDir:
+            sizeLimit: 10Gi
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: bems-worker
+  namespace: bems
+  labels:
+    app: bems-worker
+spec:
+  type: ClusterIP
+  selector:
+    app: bems-worker
+  ports:
+    - name: metrics
+      port: 9090
+      targetPort: metrics
