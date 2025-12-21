@@ -1,0 +1,43 @@
+cluster.name: bems-search-cluster
+node.name: __NODE_NAME__
+node.roles: [ data, ingest ]
+
+network.host: __NODE_IP__
+http.port: 9200
+transport.port: 9300
+
+discovery.seed_hosts:
+  - 10.10.21.50
+  - 10.10.21.51
+  - 10.10.21.52
+
+path.data: /data/opensearch
+path.logs: /var/log/opensearch
+
+bootstrap.memory_lock: true
+
+# ===== Security plugin (TLS) =====
+plugins.security.ssl.transport.pemcert_filepath: certs/node.pem
+plugins.security.ssl.transport.pemkey_filepath: certs/node-key.pem
+plugins.security.ssl.transport.pemtrustedcas_filepath: certs/root-ca.pem
+plugins.security.ssl.transport.enforce_hostname_verification: false
+
+plugins.security.ssl.http.enabled: true
+plugins.security.ssl.http.pemcert_filepath: certs/node.pem
+plugins.security.ssl.http.pemkey_filepath: certs/node-key.pem
+plugins.security.ssl.http.pemtrustedcas_filepath: certs/root-ca.pem
+
+plugins.security.nodes_dn:
+  - "CN=master-node-1,OU=BEMS,O=KRIBB,L=Daejeon,C=KR"
+  - "CN=master-node-2,OU=BEMS,O=KRIBB,L=Daejeon,C=KR"
+  - "CN=master-node-3,OU=BEMS,O=KRIBB,L=Daejeon,C=KR"
+  - "CN=data-node-1,OU=BEMS,O=KRIBB,L=Daejeon,C=KR"
+  - "CN=data-node-2,OU=BEMS,O=KRIBB,L=Daejeon,C=KR"
+  - "CN=data-node-3,OU=BEMS,O=KRIBB,L=Daejeon,C=KR"
+
+plugins.security.authcz.admin_dn:
+  - "CN=admin,OU=BEMS,O=KRIBB,L=Daejeon,C=KR"
+
+indices.query.bool.max_clause_count: 10000
+search.max_buckets: 50000
+
