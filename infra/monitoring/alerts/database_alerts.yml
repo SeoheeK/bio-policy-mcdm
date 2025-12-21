@@ -1,0 +1,48 @@
+groups:
+  - name: database_alerts
+    rules:
+      - alert: NodeDown
+        expr: up{job="node"} == 0
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: "노드 다운 감지"
+          description: "{{ $labels.instance }} node_exporter 응답 없음"
+
+      - alert: DiskUsageHigh
+        expr: (node_filesystem_avail_bytes{fstype!~"tmpfs|overlay"} / node_filesystem_size_bytes{fstype!~"tmpfs|overlay"}) < 0.10
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "디스크 사용률 90% 초과"
+          description: "{{ $labels.instance }} {{ $labels.mountpoint }} 여유 공간 10% 미만"
+
+      - alert: PostgreSQLExporterDown
+        expr: up{job="postgres"} == 0
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: "PostgreSQL exporter 다운"
+          description: "postgres_exporter 응답 없음"
+
+      - alert: MongoDBExporterDown
+        expr: up{job="mongodb"} == 0
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: "MongoDB exporter 다운"
+          description: "mongodb_exporter 응답 없음"
+
+      - alert: RedisExporterDown
+        expr: up{job="redis"} == 0
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Redis exporter 다운"
+          description: "{{ $labels.instance }} redis_exporter 응답 없음"
+
