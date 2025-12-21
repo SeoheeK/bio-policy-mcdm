@@ -31,3 +31,6 @@ dbms.checkpoint.interval.time=15m
 server.backup.enabled=true
 server.backup.listen_address=0.0.0.0:6362
 
+server.metrics.prometheus.enabled=true
+server.metrics.prometheus.endpoint=0.0.0.0:2004
+

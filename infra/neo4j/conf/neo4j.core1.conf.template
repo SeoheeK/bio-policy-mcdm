@@ -38,3 +38,8 @@ dbms.checkpoint.interval.time=15m
 server.backup.enabled=true
 server.backup.listen_address=0.0.0.0:6362
 
+# Prometheus metrics (Neo4j 5)
+# - Prometheus가 scrape할 수 있도록 별도 엔드포인트를 엽니다.
+server.metrics.prometheus.enabled=true
+server.metrics.prometheus.endpoint=0.0.0.0:2004
+

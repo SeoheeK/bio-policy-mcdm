@@ -51,3 +51,38 @@ scrape_configs:
           - "10.10.21.44:9121"
           - "10.10.21.45:9121"
 
+  # OpenSearch (exporter)
+  - job_name: "opensearch"
+    static_configs:
+      - targets:
+          # exporter를 OpenSearch 노드(또는 별도 노드)에 배포
+          - "10.10.21.50:9114"
+
+  # Neo4j (내장 Prometheus endpoint)
+  - job_name: "neo4j"
+    static_configs:
+      - targets:
+          - "10.10.21.30:2004"
+          - "10.10.21.31:2004"
+          - "10.10.21.32:2004"
+
+  # Qdrant (내장 /metrics)
+  - job_name: "qdrant"
+    metrics_path: /metrics
+    static_configs:
+      - targets:
+          - "10.10.21.60:6333"
+          - "10.10.21.61:6333"
+
+  # MinIO (내장 metrics)
+  # - 기본 경로: /minio/v2/metrics/cluster
+  # - 운영에서 인증을 붙일 수 있음(공개 수집 시 MINIO_PROMETHEUS_AUTH_TYPE=public 설정)
+  - job_name: "minio"
+    metrics_path: /minio/v2/metrics/cluster
+    static_configs:
+      - targets:
+          - "10.10.31.10:9000"
+          - "10.10.31.11:9000"
+          - "10.10.31.12:9000"
+          - "10.10.31.13:9000"
+
