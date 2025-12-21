@@ -1,0 +1,17 @@
+[Unit]
+Description=Prometheus Redis Exporter
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=redisexp
+Group=redisexp
+EnvironmentFile=-/etc/redis_exporter/redis_exporter.env
+ExecStart=/usr/local/bin/redis_exporter --web.listen-address=:9121 --redis.addr=${REDIS_ADDR} --redis.password=${REDIS_PASSWORD}
+Restart=always
+RestartSec=3
+
+[Install]
+WantedBy=multi-user.target
+

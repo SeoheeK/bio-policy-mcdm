@@ -1,0 +1,17 @@
+[Unit]
+Description=Prometheus MongoDB Exporter
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=mongoexp
+Group=mongoexp
+EnvironmentFile=-/etc/mongodb_exporter/mongodb_exporter.env
+ExecStart=/usr/local/bin/mongodb_exporter --web.listen-address=:9216 --mongodb.uri=${MONGODB_URI}
+Restart=always
+RestartSec=3
+
+[Install]
+WantedBy=multi-user.target
+

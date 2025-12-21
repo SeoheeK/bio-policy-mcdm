@@ -1,0 +1,17 @@
+[Unit]
+Description=Prometheus PostgreSQL Exporter
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=pgexp
+Group=pgexp
+EnvironmentFile=-/etc/postgres_exporter/postgres_exporter.env
+ExecStart=/usr/local/bin/postgres_exporter --web.listen-address=:9187
+Restart=always
+RestartSec=3
+
+[Install]
+WantedBy=multi-user.target
+
