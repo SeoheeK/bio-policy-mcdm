@@ -1,0 +1,33 @@
+# Neo4j 5.15 Community - 단일 노드 템플릿
+
+# 네트워크 바인딩
+server.default_listen_address=0.0.0.0
+server.default_advertised_address=10.10.21.30
+
+server.bolt.enabled=true
+server.bolt.listen_address=:7687
+
+server.http.enabled=true
+server.http.listen_address=:7474
+
+# (선택) HTTPS 사용 시
+# server.https.enabled=true
+# server.https.listen_address=:7473
+
+# 보안
+dbms.security.auth_enabled=true
+
+# 메모리(64GB RAM 기준 예시)
+server.memory.heap.initial_size=8g
+server.memory.heap.max_size=8g
+server.memory.pagecache.size=24g
+
+# 트랜잭션/체크포인트(예시)
+db.tx_log.rotation.retention_policy=7 days
+db.checkpoint.interval.time=15m
+db.transaction.timeout=30s
+
+# 로그(필요시 튜닝)
+# server.logs.query.enabled=true
+# server.logs.query.threshold=1s
+

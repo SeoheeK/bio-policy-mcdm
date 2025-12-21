@@ -1,0 +1,18 @@
+[Unit]
+Description=PgBouncer PostgreSQL connection pooler
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=postgres
+Group=postgres
+ExecStart=/usr/sbin/pgbouncer /etc/pgbouncer/pgbouncer.ini
+Restart=always
+RestartSec=3
+
+LimitNOFILE=65536
+
+[Install]
+WantedBy=multi-user.target
+
