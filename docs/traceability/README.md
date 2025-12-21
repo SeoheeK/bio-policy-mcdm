@@ -6,6 +6,8 @@
 
 - **추적성 매트릭스 템플릿 (CSV)**: `traceability-matrix-template.csv`
 - **추적성 매트릭스 템플릿 (XLSX)**: `traceability-matrix-template.xlsx`
+- **추적성 매트릭스 운영본 (CSV)**: `traceability-matrix.csv`
+- **추적성 매트릭스 운영본 (XLSX)**: `traceability-matrix.xlsx`
 
 ## 템플릿 사용 방법(권장)
 
@@ -24,4 +26,9 @@
 ```bash
 python3 scripts/export_requirements.py
 ```
+
+## 운영 방식(권장)
+
+- 템플릿(`traceability-matrix-template.*`)은 **재생성 기준**으로 유지
+- 운영본(`traceability-matrix.*`)은 **프로젝트 진행(설계/개발/테스트 상태, Obsidian 키/링크 등)을 업데이트**하는 파일로 사용
 
