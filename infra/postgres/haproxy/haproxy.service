@@ -1,0 +1,17 @@
+[Unit]
+Description=HAProxy TCP load balancer for PostgreSQL
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=notify
+ExecStart=/usr/sbin/haproxy -Ws -f /etc/haproxy/haproxy.cfg -p /run/haproxy.pid
+ExecReload=/usr/sbin/haproxy -Ws -f /etc/haproxy/haproxy.cfg -p /run/haproxy.pid -sf $(cat /run/haproxy.pid)
+Restart=always
+RestartSec=3
+
+LimitNOFILE=65536
+
+[Install]
+WantedBy=multi-user.target
+

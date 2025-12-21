@@ -1,0 +1,46 @@
+scope: bems-postgres
+namespace: /service/
+name: pg-node-2
+
+restapi:
+  listen: 10.10.21.11:8008
+  connect_address: 10.10.21.11:8008
+  authentication:
+    username: ${PATRONI_REST_API_USER}
+    password: ${PATRONI_REST_API_PASSWORD}
+
+etcd:
+  hosts: 10.10.21.70:2379,10.10.21.71:2379,10.10.21.72:2379
+
+bootstrap:
+  # node2는 신규 클러스터 bootstrap을 수행하지 않습니다(leader가 node1에서 수행).
+  # Patroni는 최초 cluster 생성 이후 DCS에서 설정을 가져옵니다.
+  dcs:
+    postgresql:
+      parameters:
+        synchronous_commit: "on"
+        synchronous_standby_names: "1 (pg-node-2)"
+
+postgresql:
+  listen: 10.10.21.11:5432
+  connect_address: 10.10.21.11:5432
+  data_dir: /data/postgresql
+  bin_dir: /usr/lib/postgresql/15/bin
+  pgpass: /var/lib/postgresql/.pgpass
+  authentication:
+    superuser:
+      username: postgres
+      password: ${POSTGRES_SUPERUSER_PASSWORD}
+    replication:
+      username: replicator
+      password: ${POSTGRES_REPL_PASSWORD}
+
+  parameters:
+    unix_socket_directories: "/var/run/postgresql"
+
+tags:
+  nofailover: false
+  noloadbalance: false
+  clonefrom: true
+  nosync: false
+

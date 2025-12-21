@@ -1,0 +1,122 @@
+scope: bems-postgres
+namespace: /service/
+name: pg-node-1
+
+restapi:
+  listen: 10.10.21.10:8008
+  connect_address: 10.10.21.10:8008
+  authentication:
+    username: ${PATRONI_REST_API_USER}
+    password: ${PATRONI_REST_API_PASSWORD}
+
+etcd:
+  hosts: 10.10.21.70:2379,10.10.21.71:2379,10.10.21.72:2379
+
+bootstrap:
+  dcs:
+    ttl: 30
+    loop_wait: 10
+    retry_timeout: 10
+    maximum_lag_on_failover: 1048576
+    postgresql:
+      use_pg_rewind: true
+      use_slots: true
+      parameters:
+        # 연결
+        max_connections: 200
+
+        # 메모리(128GB RAM 기준 예시)
+        shared_buffers: 32GB
+        effective_cache_size: 96GB
+        work_mem: 64MB
+        maintenance_work_mem: 2GB
+
+        # WAL/복제
+        wal_level: replica
+        max_wal_senders: 10
+        max_replication_slots: 10
+        wal_keep_size: 2GB
+        hot_standby: "on"
+
+        # 체크포인트/IO
+        checkpoint_timeout: 15min
+        checkpoint_completion_target: 0.9
+        max_wal_size: 4GB
+        min_wal_size: 1GB
+        random_page_cost: 1.1
+        effective_io_concurrency: 200
+
+        # 로그(기본: 1초 이상 쿼리)
+        logging_collector: "on"
+        log_destination: csvlog
+        log_directory: /var/log/postgresql
+        log_filename: postgresql-%Y-%m-%d_%H%M%S.log
+        log_min_duration_statement: 1000
+        log_statement: mod
+        log_checkpoints: "on"
+        log_connections: "on"
+        log_disconnections: "on"
+        log_lock_waits: "on"
+        log_temp_files: 0
+        log_line_prefix: "%t [%p]: [%l-1] user=%u,db=%d,app=%a,client=%h "
+
+        # 동기 복제(2노드 구성 시, Standby 1대를 동기 대상)
+        synchronous_commit: "on"
+        synchronous_standby_names: "1 (pg-node-2)"
+
+  initdb:
+    - encoding: UTF8
+    - data-checksums
+
+  pg_hba:
+    # 로컬
+    - "local   all             postgres                                peer"
+    - "local   all             all                                     scram-sha-256"
+    # localhost
+    - "host    all             all             127.0.0.1/32            scram-sha-256"
+    # 앱 네트워크
+    - "host    all             bems_app        10.10.11.0/24           scram-sha-256"
+    # 복제
+    - "host    replication     replicator      10.10.21.11/32          scram-sha-256"
+    # 운영/백업
+    - "host    all             postgres        10.10.21.0/24           scram-sha-256"
+
+  users:
+    postgres:
+      password: ${POSTGRES_SUPERUSER_PASSWORD}
+      options:
+        - superuser
+        - createdb
+        - createrole
+    replicator:
+      password: ${POSTGRES_REPL_PASSWORD}
+      options:
+        - replication
+    bems_app:
+      password: ${POSTGRES_APP_PASSWORD}
+      options:
+        - login
+
+postgresql:
+  listen: 10.10.21.10:5432
+  connect_address: 10.10.21.10:5432
+  data_dir: /data/postgresql
+  bin_dir: /usr/lib/postgresql/15/bin
+  pgpass: /var/lib/postgresql/.pgpass
+  authentication:
+    superuser:
+      username: postgres
+      password: ${POSTGRES_SUPERUSER_PASSWORD}
+    replication:
+      username: replicator
+      password: ${POSTGRES_REPL_PASSWORD}
+
+  parameters:
+    unix_socket_directories: "/var/run/postgresql"
+
+tags:
+  nofailover: false
+  noloadbalance: false
+  clonefrom: false
+  nosync: false
+
