@@ -1,8 +1,7 @@
-# bio-policy-mcdm
+## bio-policy-mcdm
 
-## 온프레미스 DB 설계서 구현 산출물
-
-설계서(온프레미스)에 기반한 구현 템플릿/스크립트는 `infra/`에 생성됩니다.
-
-- `infra/README.md` 참고
-- 단계별 구현 결과 보고서는 `report.csv`에 기록됩니다.
+- **ISP 보고서(마크다운)**: `docs/KRIBB_AI_BEMS_ISP.md`
+- **ISP(프로젝트 폴더 복제본)**: `docs/project/ISP/README.md`
+- **RFP 템플릿**: `docs/rfp/RFP_Template_KRIBB_BEMS.md`
+- **WBS/간트(표준)**: `docs/project/WBS_and_Gantt.md` (상세: `docs/project/WBS.csv`)
+- **데이터 표준(지표/온톨로지)**: `docs/data/README.md`

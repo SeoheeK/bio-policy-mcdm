@@ -1,0 +1,222 @@
+@prefix bems: <https://kribb.re.kr/bems/ontology#> .
+@prefix dcterms: <http://purl.org/dc/terms/> .
+@prefix prov: <http://www.w3.org/ns/prov#> .
+@prefix schema: <https://schema.org/> .
+@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
+@prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix owl: <http://www.w3.org/2002/07/owl#> .
+
+######################################################################
+# Ontology: KRIBB BEMS (Draft)
+# Purpose: 정책-기술-행위자-성과-지표의 최소 공통 모델(MVP)을 제공
+# Status: Draft v0.1 (확장/버전관리 전제)
+######################################################################
+
+<https://kribb.re.kr/bems/ontology>
+  a owl:Ontology ;
+  dcterms:title "KRIBB BEMS Ontology (Draft)"@en ;
+  dcterms:title "KRIBB BEMS 온톨로지(초안)"@ko ;
+  dcterms:description "정책 인텔리전스/지식그래프/지표관측을 위한 최소 온톨로지"@ko ;
+  owl:versionInfo "0.1" ;
+  dcterms:issued "2025-12-21"^^xsd:date .
+
+######################################################################
+# Classes
+######################################################################
+
+bems:PolicyDocument a owl:Class ; rdfs:label "정책 문서"@ko ; rdfs:subClassOf schema:CreativeWork .
+bems:Policy a owl:Class ; rdfs:label "정책/전략"@ko ; rdfs:subClassOf schema:Intangible .
+bems:PolicyInstrument a owl:Class ; rdfs:label "정책 수단"@ko ; rdfs:subClassOf schema:Intangible .
+bems:Program a owl:Class ; rdfs:label "프로그램"@ko ; rdfs:subClassOf schema:Intangible .
+bems:Project a owl:Class ; rdfs:label "R&D 과제/프로젝트"@ko ; rdfs:subClassOf schema:Project .
+bems:BudgetLine a owl:Class ; rdfs:label "예산 항목"@ko ; rdfs:subClassOf schema:Intangible .
+bems:Organization a owl:Class ; rdfs:label "조직"@ko ; rdfs:subClassOf schema:Organization .
+bems:Person a owl:Class ; rdfs:label "개인"@ko ; rdfs:subClassOf schema:Person .
+bems:Technology a owl:Class ; rdfs:label "기술/도메인"@ko ; rdfs:subClassOf schema:DefinedTerm .
+bems:Output a owl:Class ; rdfs:label "성과(논문/특허/임상/승인)"@ko ; rdfs:subClassOf schema:CreativeWork .
+bems:Indicator a owl:Class ; rdfs:label "지표"@ko ; rdfs:subClassOf schema:DefinedTerm .
+bems:Observation a owl:Class ; rdfs:label "지표 관측값"@ko ; rdfs:subClassOf schema:QuantitativeValue .
+bems:Dataset a owl:Class ; rdfs:label "데이터셋"@ko ; rdfs:subClassOf schema:Dataset .
+bems:Evidence a owl:Class ; rdfs:label "근거"@ko ; rdfs:subClassOf schema:CreativeWork .
+bems:Country a owl:Class ; rdfs:label "국가"@ko ; rdfs:subClassOf schema:Country .
+bems:Region a owl:Class ; rdfs:label "지역"@ko ; rdfs:subClassOf schema:Place .
+bems:Event a owl:Class ; rdfs:label "이벤트(발표/시행/개정)"@ko ; rdfs:subClassOf schema:Event .
+
+######################################################################
+# Object Properties (Relationships)
+######################################################################
+
+# 정책문서 -> 정책
+bems:documentsPolicy a owl:ObjectProperty ;
+  rdfs:label "정책을 문서화한다"@ko ;
+  rdfs:domain bems:PolicyDocument ;
+  rdfs:range bems:Policy .
+
+# 조직 -> 정책(이행/주관)
+bems:implementsPolicy a owl:ObjectProperty ;
+  rdfs:label "정책을 이행한다"@ko ;
+  rdfs:domain bems:Organization ;
+  rdfs:range bems:Policy .
+
+# 정책 -> 정책수단
+bems:usesInstrument a owl:ObjectProperty ;
+  rdfs:label "정책수단을 사용한다"@ko ;
+  rdfs:domain bems:Policy ;
+  rdfs:range bems:PolicyInstrument .
+
+# 정책/프로그램/과제 -> 기술 타깃
+bems:targetsTechnology a owl:ObjectProperty ;
+  rdfs:label "기술을 대상으로 한다"@ko ;
+  rdfs:domain bems:Policy ;
+  rdfs:range bems:Technology .
+
+bems:programTargetsTechnology a owl:ObjectProperty ;
+  rdfs:label "프로그램이 기술을 대상으로 한다"@ko ;
+  rdfs:domain bems:Program ;
+  rdfs:range bems:Technology .
+
+# 프로그램 -> 과제
+bems:hasProject a owl:ObjectProperty ;
+  rdfs:label "과제를 포함한다"@ko ;
+  rdfs:domain bems:Program ;
+  rdfs:range bems:Project .
+
+# 과제 -> 성과
+bems:producesOutput a owl:ObjectProperty ;
+  rdfs:label "성과를 산출한다"@ko ;
+  rdfs:domain bems:Project ;
+  rdfs:range bems:Output .
+
+# 성과 -> 기술
+bems:relatesToTechnology a owl:ObjectProperty ;
+  rdfs:label "기술과 관련된다"@ko ;
+  rdfs:domain bems:Output ;
+  rdfs:range bems:Technology .
+
+# 예산 -> 프로그램/과제
+bems:fundsProgram a owl:ObjectProperty ;
+  rdfs:label "프로그램에 재원을 제공한다"@ko ;
+  rdfs:domain bems:BudgetLine ;
+  rdfs:range bems:Program .
+
+bems:fundsProject a owl:ObjectProperty ;
+  rdfs:label "과제에 재원을 제공한다"@ko ;
+  rdfs:domain bems:BudgetLine ;
+  rdfs:range bems:Project .
+
+# 정책/수단 -> 지표에 영향
+bems:affectsIndicator a owl:ObjectProperty ;
+  rdfs:label "지표에 영향을 준다"@ko ;
+  rdfs:domain bems:PolicyInstrument ;
+  rdfs:range bems:Indicator .
+
+# 지표 -> 관측값
+bems:hasObservation a owl:ObjectProperty ;
+  rdfs:label "관측값을 가진다"@ko ;
+  rdfs:domain bems:Indicator ;
+  rdfs:range bems:Observation .
+
+# 관측값 -> 근거(출처 문서/데이터셋)
+bems:hasEvidence a owl:ObjectProperty ;
+  rdfs:label "근거를 가진다"@ko ;
+  rdfs:domain bems:Observation ;
+  rdfs:range bems:Evidence .
+
+# 근거 -> 원문/데이터셋
+bems:derivedFromDocument a owl:ObjectProperty ;
+  rdfs:label "원문에서 유래한다"@ko ;
+  rdfs:domain bems:Evidence ;
+  rdfs:range bems:PolicyDocument .
+
+bems:derivedFromDataset a owl:ObjectProperty ;
+  rdfs:label "데이터셋에서 유래한다"@ko ;
+  rdfs:domain bems:Evidence ;
+  rdfs:range bems:Dataset .
+
+######################################################################
+# Datatype Properties
+######################################################################
+
+bems:externalId a owl:DatatypeProperty ;
+  rdfs:label "외부 식별자"@ko ;
+  rdfs:range xsd:string .
+
+bems:countryCode a owl:DatatypeProperty ;
+  rdfs:label "국가 코드"@ko ;
+  rdfs:domain bems:Country ;
+  rdfs:range xsd:string .
+
+bems:timePeriodStart a owl:DatatypeProperty ;
+  rdfs:label "기간 시작"@ko ;
+  rdfs:domain bems:Observation ;
+  rdfs:range xsd:date .
+
+bems:timePeriodEnd a owl:DatatypeProperty ;
+  rdfs:label "기간 종료"@ko ;
+  rdfs:domain bems:Observation ;
+  rdfs:range xsd:date .
+
+bems:value a owl:DatatypeProperty ;
+  rdfs:label "값"@ko ;
+  rdfs:domain bems:Observation ;
+  rdfs:range xsd:double .
+
+bems:unit a owl:DatatypeProperty ;
+  rdfs:label "단위"@ko ;
+  rdfs:domain bems:Observation ;
+  rdfs:range xsd:string .
+
+bems:confidenceScore a owl:DatatypeProperty ;
+  rdfs:label "신뢰도 점수(0~1)"@ko ;
+  rdfs:domain bems:Evidence ;
+  rdfs:range xsd:double .
+
+bems:methodNote a owl:DatatypeProperty ;
+  rdfs:label "산출 방법 메모"@ko ;
+  rdfs:range xsd:string .
+
+######################################################################
+# Provenance (권장 패턴)
+######################################################################
+
+# 관측값은 prov:Entity로도 취급 가능(출처/파생 추적)
+bems:Observation rdfs:subClassOf prov:Entity .
+bems:Evidence rdfs:subClassOf prov:Entity .
+bems:Dataset rdfs:subClassOf prov:Entity .
+
+######################################################################
+# Minimal Example (샘플 인스턴스)
+######################################################################
+
+bems:policyDoc_Example_001 a bems:PolicyDocument ;
+  dcterms:title "Example Bio Policy Document"@en ;
+  dcterms:identifier "DOC-001" ;
+  schema:url "https://example.org/policy/doc-001" .
+
+bems:policy_Example_001 a bems:Policy ;
+  dcterms:title "Example Bio Strategy"@en ;
+  bems:externalId "POL-001" .
+
+bems:policyDoc_Example_001 bems:documentsPolicy bems:policy_Example_001 .
+
+bems:indicator_EHI_TECH_001 a bems:Indicator ;
+  dcterms:identifier "EHI_TECH_001" ;
+  dcterms:title "논문 건수"@ko .
+
+bems:obs_EHI_TECH_001_2025M12 a bems:Observation ;
+  bems:value 1234.0 ;
+  bems:unit "건" ;
+  bems:timePeriodStart "2025-12-01"^^xsd:date ;
+  bems:timePeriodEnd "2025-12-31"^^xsd:date .
+
+bems:indicator_EHI_TECH_001 bems:hasObservation bems:obs_EHI_TECH_001_2025M12 .
+
+bems:evidence_obs_001 a bems:Evidence ;
+  dcterms:description "Aggregated from PubMed weekly dump"@en ;
+  bems:confidenceScore 0.9 ;
+  bems:methodNote "Deduplicate by DOI when available" .
+
+bems:obs_EHI_TECH_001_2025M12 bems:hasEvidence bems:evidence_obs_001 .
+bems:evidence_obs_001 bems:derivedFromDocument bems:policyDoc_Example_001 .
+
