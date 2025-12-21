@@ -338,25 +338,154 @@ class RiskAnalyzer:
 
 ## 4. 배치 및 이벤트 처리 내구성 설계(운영 필수)
 
-### 4.1 최소 요구사항
-- Idempotency(중복 처리 방지): `document_id`, `message_id` 기반 upsert/unique constraint
-- Retry 정책: 지수 백오프 + 최대 재시도 + 데드레터(DLQ)
-- Poison 메시지 격리: DLQ 라우팅 + 원인 분류(파서/포맷/권한/외부 장애)
-- Outbox/Inbox 패턴(권고): DB 트랜잭션과 이벤트 발행 일관성 확보
+### 4.1 최소 요구사항(요약)
+- **Idempotency(중복 처리 방지)**: `document_id`/`message_id` 기반 **unique constraint + upsert** + 애플리케이션 레벨 멱등성 키
+- **Retry 정책**: 지수 백오프 + 최대 재시도 + 재시도 간격(즉시/지연) 분리
+- **Poison 메시지 격리**: DLQ 라우팅 + 원인 분류(파서/포맷/권한/외부 장애)
+- **Outbox/Inbox 패턴(권고)**: DB 트랜잭션과 이벤트 발행/소비의 일관성 확보
+
+---
+
+### 4.2 Idempotency 패턴
+
+#### 4.2.1 설계 시 주의점(운영에서 자주 터지는 부분)
+- Redis `get()`은 보통 **bytes**를 반환하므로 JSON 파싱 전 **decode**가 필요합니다.
+- “processing” 같은 문자열을 저장하면, 이후 `json.loads()`에서 실패합니다.  
+  → **상태/결과를 하나의 JSON으로 저장**하거나, **lock key와 result key를 분리**하세요.
+- 멱등/쿼터는 “체크 후 세팅”이 레이스가 생깁니다.  
+  → 중요 경로는 (가능하면) **Lua 스크립트**로 원자 처리 권고.
+
+#### 4.2.2 IdempotencyManager(개선판: 상태/결과 JSON + bytes 디코딩)
+
+```python
+# common/idempotency.py
+
+import hashlib
+import json
+import logging
+from datetime import datetime
+from typing import Any, Dict, Optional
+
+from redis import Redis
+
+logger = logging.getLogger(__name__)
+
+
+class DuplicateRequestError(Exception):
+    pass
+
+
+class IdempotencyManager:
+    """
+    멱등성 키로 (1) 처리 중 락, (2) 결과 캐시를 동일 key(JSON)로 관리하는 단순 패턴.
+    - value 예시:
+      {"status":"processing","created_at":"..."}
+      {"status":"completed","completed_at":"...","result":{...}}
+    """
+
+    def __init__(self, redis_client: Redis, ttl: int = 86400):
+        self.redis = redis_client
+        self.ttl = ttl
+
+    def generate_key(self, operation: str, params: Dict[str, Any]) -> str:
+        sorted_params = json.dumps(params, sort_keys=True, separators=(",", ":"))
+        hash_input = f"{operation}:{sorted_params}"
+        key_hash = hashlib.sha256(hash_input.encode("utf-8")).hexdigest()
+        return f"idempotency:{operation}:{key_hash}"
+
+    def get(self, key: str) -> Optional[Dict[str, Any]]:
+        raw = self.redis.get(key)
+        if raw is None:
+            return None
+        if isinstance(raw, (bytes, bytearray)):
+            raw = raw.decode("utf-8", errors="replace")
+        return json.loads(raw)
+
+    def acquire(self, key: str) -> bool:
+        payload = {"status": "processing", "created_at": datetime.utcnow().isoformat()}
+        return bool(self.redis.set(key, json.dumps(payload), ex=self.ttl, nx=True))
+
+    def complete(self, key: str, result: Dict[str, Any], ttl: Optional[int] = None) -> None:
+        payload = {
+            "status": "completed",
+            "completed_at": datetime.utcnow().isoformat(),
+            "result": result,
+        }
+        self.redis.set(key, json.dumps(payload), ex=ttl or self.ttl)
+
+    def delete(self, key: str) -> None:
+        self.redis.delete(key)
+```
+
+#### 4.2.3 사용 패턴(문서 처리 예시)
+
+```python
+class DocumentProcessor:
+    def __init__(self, idempotency_manager: IdempotencyManager):
+        self.idempotency = idempotency_manager
+
+    async def process_document(self, document_id: str, force: bool = False) -> Dict[str, Any]:
+        key = self.idempotency.generate_key("document_process", {"document_id": document_id})
+
+        if not force:
+            state = self.idempotency.get(key)
+            if state and state.get("status") == "completed":
+                return state["result"]
+            if state and state.get("status") == "processing":
+                raise DuplicateRequestError(f"Document {document_id} is already being processed")
+
+            if not self.idempotency.acquire(key):
+                state = self.idempotency.get(key)
+                if state and state.get("status") == "completed":
+                    return state["result"]
+                raise DuplicateRequestError(f"Document {document_id} is already being processed")
+
+        try:
+            result = await self._do_process(document_id)
+            self.idempotency.complete(key, result)
+            return result
+        except Exception:
+            # 실패 시 재시도 허용 정책(즉시 재시도 가능하도록 키 삭제)
+            self.idempotency.delete(key)
+            raise
+```
+
+---
+
+### 4.3 DLQ(Dead Letter Queue) 설계
+
+#### 4.3.1 Kafka DLQ 패턴(운영 보완 포인트)
+- 컨슈머 루프 안에서 `await asyncio.sleep()`로 지연 재시도를 구현하면 **컨슈머 처리량이 급락**합니다.  
+  → 권고: **retry topic(예: `topic.retry`)**로 즉시 재발행하고, 별도 워커가 지연/재큐잉.
+- 재발행 성공 후 커밋(수동 커밋)으로 “유실 없이 중복만 허용” 방향을 택합니다.
+
+#### 4.3.2 Saga 패턴(상세) 적용 시 권고
+- 문서 파이프라인(원문 저장 + 메타 저장 + 인덱싱)은 강한 일관성(Saga)보다 **Outbox + 비동기 재시도**가 운영에 적합한 경우가 많습니다.
+- OpenSearch 인덱싱 실패는 “보상 삭제”보다 “재시도/백필”이 운영 비용이 낮습니다.
 
 ---
 
 ## 5. 데이터 거버넌스 정책(운영 필수)
+### 5.1 필수 항목(요약)
 - 데이터 분류(공개/내부/민감/제한) 및 저장소별 보관기간
 - 문서 원문(S3/MinIO), 로그(OpenSearch/ELK), LLM 입력/출력의 보관 원칙
 - 감사로그(다운로드/보고서 생성/권한변경)는 삭제 불가 또는 WORM(권고)
 
+### 5.2 PII 처리(필수 보완)
+- 해시 salt/secret을 코드에 하드코딩 금지(Secret Manager에서 주입)
+- 이메일 정규식은 `[A-Z|a-z]` 대신 `[A-Za-z]` 권고(`|` 포함 오류 방지)
+
 ---
 
 ## 6. 성능 및 비용 가드레일(운영 필수)
+### 6.1 필수 항목(요약)
 - 시뮬레이션: `n_runs`, 기간, 동시 실행 수 상한 + 사용자/역할별 쿼터
 - LLM: 호출 빈도 제한 + 토큰 상한 + 비용 메트릭/예산 알림(월간/주간)
 - 검색(OpenSearch): 결과 크기 제한, timeout, circuit breaker 적용
+
+### 6.2 Budget Circuit Breaker(주의: Async 불일치)
+- LLM 클라이언트에서 `await circuit_breaker.call(...)` 형태를 쓰려면, 서킷 브레이커가 **async 지원**을 제공해야 합니다.
+- async 미지원 서킷 브레이커를 그대로 쓰면 런타임에서 의도대로 동작하지 않습니다(구현 시 AsyncCircuitBreaker 또는 호출 구조 변경 필요).
 
 ---
 

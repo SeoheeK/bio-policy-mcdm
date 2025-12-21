@@ -92,6 +92,41 @@ spec:
             summary: "크롤러 실행시간 p95 증가(>10분)"
             description: "크롤링 지연. 네트워크/차단/리소스 부족 및 병렬성 설정 확인."
 
+    - name: bems.app.queue
+      rules:
+        - alert: BEMSQueueLagHigh
+          expr: |
+            max(bems_queue_lag) > 10000
+          for: 10m
+          labels:
+            severity: page
+          annotations:
+            summary: "큐 lag 증가(>10,000)"
+            description: "bems_queue_lag 기준 10분 이상 임계치 초과. 워커 장애/리소스 부족/다운스트림 지연 확인."
+
+        - alert: BEMSQueueProcessingLatencyP95High
+          expr: |
+            histogram_quantile(
+              0.95,
+              sum by (le) (rate(bems_queue_processing_duration_seconds_bucket[15m]))
+            ) > 10
+          for: 30m
+          labels:
+            severity: warn
+          annotations:
+            summary: "메시지 처리 지연 p95 증가(>10s)"
+            description: "bems_queue_processing_duration_seconds_bucket 기준 30분 이상 p95 10초 초과. 특정 핸들러/외부 의존성 확인."
+
+        - alert: BEMSDLQMessagesRateHigh
+          expr: |
+            sum(rate(bems_queue_messages_total{status="failed"}[15m])) > 1
+          for: 30m
+          labels:
+            severity: warn
+          annotations:
+            summary: "메시지 처리 실패 증가(>1 msg/s)"
+            description: "DLQ 유입 증가 가능. 에러 타입/배포 변경/스키마 불일치 확인."
+
     - name: bems.app.simulation
       rules:
         - alert: BEMSSimulationFailureRateHigh
