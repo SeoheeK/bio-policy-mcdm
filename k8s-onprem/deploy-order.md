@@ -223,8 +223,10 @@ kubectl -n bems-prod get netpol
 
 ```bash
 kubectl apply -f k8s-onprem/05-monitoring/servicemonitor.yaml
+kubectl apply -f k8s-onprem/05-monitoring/prometheus-rules.yaml
 ```
 
 검증:
 - Prometheus Targets에서 `bems-api`, `bems-worker` 스크랩 확인
+- Alert rules/Alerts에서 `BEMS*` 룰 로드 확인
 
