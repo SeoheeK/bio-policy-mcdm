@@ -219,7 +219,18 @@ kubectl -n bems-prod get netpol
 
 ## 4) 모니터링(선택: kube-prometheus-stack 연동)
 
-> kube-prometheus-stack 설치 후 적용하세요.
+> kube-prometheus-stack를 아래 values로 설치하면, `bems-prod`의 ServiceMonitor/PrometheusRule을 확실히 로드합니다.
+
+### 4.1 kube-prometheus-stack 설치(Helm)
+
+```bash
+helm repo add prometheus-community https://prometheus-community.github.io/helm-charts
+helm repo update
+
+helm install kube-prometheus-stack prometheus-community/kube-prometheus-stack \
+  --namespace monitoring --create-namespace \
+  -f k8s-onprem/05-monitoring/values-kube-prometheus-stack.yaml
+```
 
 ```bash
 kubectl apply -f k8s-onprem/05-monitoring/servicemonitor.yaml
