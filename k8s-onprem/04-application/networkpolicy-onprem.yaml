@@ -38,53 +38,26 @@ spec:
         - protocol: TCP
           port: 53
 
-    # PostgreSQL (예: bems-data 네임스페이스)
+    # 데이터 서비스(Operator/Helm 라벨 차이로 막히지 않도록 "네임스페이스 + 포트" 기반으로 허용)
     - to:
         - namespaceSelector:
             matchLabels:
               kubernetes.io/metadata.name: bems-data
-          podSelector:
-            matchLabels:
-              app: postgresql
       ports:
         - protocol: TCP
-          port: 5432
-
-    # Redis
-    - to:
-        - namespaceSelector:
-            matchLabels:
-              kubernetes.io/metadata.name: bems-data
-          podSelector:
-            matchLabels:
-              app: redis
-      ports:
+          port: 5432   # PostgreSQL (CNPG service)
         - protocol: TCP
-          port: 6379
-
-    # Kafka
-    - to:
-        - namespaceSelector:
-            matchLabels:
-              kubernetes.io/metadata.name: bems-data
-          podSelector:
-            matchLabels:
-              app: kafka
-      ports:
+          port: 6379   # Redis
         - protocol: TCP
-          port: 9092
+          port: 9092   # Kafka bootstrap
 
-    # MinIO(S3 호환)
     - to:
         - namespaceSelector:
             matchLabels:
               kubernetes.io/metadata.name: bems-storage
-          podSelector:
-            matchLabels:
-              app: minio
       ports:
         - protocol: TCP
-          port: 9000
+          port: 9000   # MinIO(S3)
 
     # 외부 HTTPS(정책 크롤링/공개 API/LLM 등) - 사설 대역 제외
     - to:

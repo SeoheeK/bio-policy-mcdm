@@ -1,0 +1,51 @@
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: bems-api
+  namespace: bems-prod
+  labels:
+    app: bems-api
+    release: kube-prometheus-stack
+spec:
+  selector:
+    matchLabels:
+      app: bems-api
+  namespaceSelector:
+    matchNames: ["bems-prod"]
+  endpoints:
+    - port: metrics
+      path: /metrics
+      interval: 30s
+      scrapeTimeout: 10s
+      metricRelabelings:
+        - targetLabel: service
+          replacement: bems-api
+        - targetLabel: environment
+          replacement: production
+
+---
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: bems-worker
+  namespace: bems-prod
+  labels:
+    app: bems-worker
+    release: kube-prometheus-stack
+spec:
+  selector:
+    matchLabels:
+      app: bems-worker
+  namespaceSelector:
+    matchNames: ["bems-prod"]
+  endpoints:
+    - port: metrics
+      path: /metrics
+      interval: 30s
+      scrapeTimeout: 10s
+      metricRelabelings:
+        - targetLabel: service
+          replacement: bems-worker
+        - targetLabel: environment
+          replacement: production
+
