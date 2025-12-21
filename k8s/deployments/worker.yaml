@@ -44,6 +44,12 @@ spec:
             - secretRef:
                 name: bems-secrets
           env:
+            - name: POSTGRES_DSN
+              value: "postgresql://$(POSTGRES_USER):$(POSTGRES_PASSWORD)@$(POSTGRES_HOST):$(POSTGRES_PORT)/$(POSTGRES_DB)"
+            - name: MONGODB_DSN
+              value: "mongodb://$(MONGODB_USER):$(MONGODB_PASSWORD)@$(MONGODB_HOST):$(MONGODB_PORT)/$(MONGODB_DB)"
+            - name: REDIS_DSN
+              value: "redis://:$(REDIS_PASSWORD)@$(REDIS_HOST):$(REDIS_PORT)/0"
             - name: WORKER_TYPE
               value: "kafka_consumer"
             - name: KAFKA_BOOTSTRAP_SERVERS

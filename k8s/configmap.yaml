@@ -9,12 +9,26 @@ data:
   LOG_LEVEL: "INFO"
   LOG_FORMAT: "json"
 
-  # 권고: host/port 대신 DSN 단일값을 사용(운영/변경 용이)
-  # 실제 값은 환경별로 주입하세요.
-  POSTGRES_DSN: "postgresql://bems_user:${POSTGRES_PASSWORD}@postgres.bems.svc.cluster.local:5432/bems"
-  MONGODB_DSN: "mongodb://bems_user:${MONGODB_PASSWORD}@mongodb.bems.svc.cluster.local:27017/bems_documents"
+  # NOTE: envFrom(ConfigMap/Secret)만으로는 ${VAR} 치환이 되지 않습니다.
+  # 따라서 DSN은 Deployment에서 env.value의 $(VAR) 치환을 사용해 구성하거나,
+  # 애플리케이션에서 host/port/user/password를 조합하도록 구현해야 합니다.
+  #
+  # 여기서는 base 정보(host/port/db/user)만 ConfigMap에 두고,
+  # password는 Secret에서 주입하는 구성을 권고합니다.
+  POSTGRES_HOST: "postgres.bems.svc.cluster.local"
+  POSTGRES_PORT: "5432"
+  POSTGRES_DB: "bems"
+  POSTGRES_USER: "bems_user"
+
+  MONGODB_HOST: "mongodb.bems.svc.cluster.local"
+  MONGODB_PORT: "27017"
+  MONGODB_DB: "bems_documents"
+  MONGODB_USER: "bems_user"
+
   NEO4J_URI: "bolt://neo4j.bems.svc.cluster.local:7687"
-  REDIS_DSN: "redis://:${REDIS_PASSWORD}@redis.bems.svc.cluster.local:6379/0"
+  REDIS_HOST: "redis.bems.svc.cluster.local"
+  REDIS_PORT: "6379"
+
   OPENSEARCH_HOSTS: "http://opensearch.bems.svc.cluster.local:9200"
   QDRANT_HOST: "qdrant.bems.svc.cluster.local"
   QDRANT_PORT: "6333"

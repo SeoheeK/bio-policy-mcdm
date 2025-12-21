@@ -59,6 +59,14 @@ spec:
                 name: bems-config
             - secretRef:
                 name: bems-secrets
+          env:
+            # DSN은 env.value에서 $(VAR) 확장을 사용(Secret과 결합)
+            - name: POSTGRES_DSN
+              value: "postgresql://$(POSTGRES_USER):$(POSTGRES_PASSWORD)@$(POSTGRES_HOST):$(POSTGRES_PORT)/$(POSTGRES_DB)"
+            - name: MONGODB_DSN
+              value: "mongodb://$(MONGODB_USER):$(MONGODB_PASSWORD)@$(MONGODB_HOST):$(MONGODB_PORT)/$(MONGODB_DB)"
+            - name: REDIS_DSN
+              value: "redis://:$(REDIS_PASSWORD)@$(REDIS_HOST):$(REDIS_PORT)/0"
           resources:
             requests:
               cpu: 500m
