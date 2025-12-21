@@ -1,0 +1,99 @@
+groups:
+  - name: product_alerts
+    rules:
+      # ---------------------------
+      # OpenSearch (via elasticsearch_exporter)
+      # ---------------------------
+      - alert: OpenSearchExporterDown
+        expr: up{job="opensearch"} == 0
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: "OpenSearch exporter 다운"
+          description: "{{ $labels.instance }} opensearch exporter 응답 없음"
+
+      # elasticsearch_exporter가 cluster health를 노출하는 경우에만 동작
+      - alert: OpenSearchClusterRed
+        expr: elasticsearch_cluster_health_status{job="opensearch", color="red"} == 1
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "OpenSearch 클러스터 상태 RED"
+          description: "클러스터 health=red ({{ $labels.instance }})"
+
+      - alert: OpenSearchClusterYellow
+        expr: elasticsearch_cluster_health_status{job="opensearch", color="yellow"} == 1
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "OpenSearch 클러스터 상태 YELLOW"
+          description: "클러스터 health=yellow 5분 이상 ({{ $labels.instance }})"
+
+      # ---------------------------
+      # Neo4j (built-in Prometheus endpoint)
+      # ---------------------------
+      - alert: Neo4jMetricsDown
+        expr: up{job="neo4j"} == 0
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Neo4j 메트릭 엔드포인트 다운"
+          description: "{{ $labels.instance }} neo4j prometheus endpoint(:2004) 응답 없음"
+
+      # 메트릭 이름/버전 차이 가능성이 있어 '존재 시'에만 의미가 있음
+      - alert: Neo4jPageCacheHitRatioLow
+        expr: neo4j_dbms_page_cache_hit_ratio{job="neo4j"} < 0.90
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Neo4j page cache hit ratio 저하"
+          description: "{{ $labels.instance }} page cache hit ratio < 0.90 (10분)"
+
+      # ---------------------------
+      # Qdrant (built-in /metrics)
+      # ---------------------------
+      - alert: QdrantMetricsDown
+        expr: up{job="qdrant"} == 0
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Qdrant 메트릭 엔드포인트 다운"
+          description: "{{ $labels.instance }} qdrant /metrics 응답 없음"
+
+      # ---------------------------
+      # MinIO (built-in metrics)
+      # ---------------------------
+      - alert: MinIOMetricsDown
+        expr: up{job="minio"} == 0
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: "MinIO 메트릭 엔드포인트 다운"
+          description: "{{ $labels.instance }} minio metrics 응답 없음"
+
+      # MinIO가 노출하는 대표 오류 신호(존재 시)
+      - alert: MinIOClusterDisksOffline
+        expr: minio_cluster_disk_offline_total{job="minio"} > 0
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: "MinIO 디스크 오프라인 감지"
+          description: "cluster offline disks > 0 ({{ $labels.instance }})"
+
+      - alert: MinIOClusterNodesOffline
+        expr: minio_cluster_nodes_offline_total{job="minio"} > 0
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: "MinIO 노드 오프라인 감지"
+          description: "cluster offline nodes > 0 ({{ $labels.instance }})"
+
