@@ -1,0 +1,53 @@
+cluster.name: bems-search-cluster
+node.name: __NODE_NAME__
+node.roles: [ master ]
+
+network.host: __NODE_IP__
+http.port: 9200
+transport.port: 9300
+
+discovery.seed_hosts:
+  - 10.10.21.50
+  - 10.10.21.51
+  - 10.10.21.52
+
+cluster.initial_master_nodes:
+  - master-node-1
+  - master-node-2
+  - master-node-3
+
+path.data: /data/opensearch
+path.logs: /var/log/opensearch
+
+bootstrap.memory_lock: true
+
+# ===== Security plugin (TLS) =====
+plugins.security.ssl.transport.pemcert_filepath: certs/node.pem
+plugins.security.ssl.transport.pemkey_filepath: certs/node-key.pem
+plugins.security.ssl.transport.pemtrustedcas_filepath: certs/root-ca.pem
+plugins.security.ssl.transport.enforce_hostname_verification: false
+
+plugins.security.ssl.http.enabled: true
+plugins.security.ssl.http.pemcert_filepath: certs/node.pem
+plugins.security.ssl.http.pemkey_filepath: certs/node-key.pem
+plugins.security.ssl.http.pemtrustedcas_filepath: certs/root-ca.pem
+
+# 노드 DN은 인증서 Subject와 일치해야 합니다.
+plugins.security.nodes_dn:
+  - "CN=master-node-1,OU=BEMS,O=KRIBB,L=Daejeon,C=KR"
+  - "CN=master-node-2,OU=BEMS,O=KRIBB,L=Daejeon,C=KR"
+  - "CN=master-node-3,OU=BEMS,O=KRIBB,L=Daejeon,C=KR"
+  - "CN=data-node-1,OU=BEMS,O=KRIBB,L=Daejeon,C=KR"
+  - "CN=data-node-2,OU=BEMS,O=KRIBB,L=Daejeon,C=KR"
+  - "CN=data-node-3,OU=BEMS,O=KRIBB,L=Daejeon,C=KR"
+
+plugins.security.authcz.admin_dn:
+  - "CN=admin,OU=BEMS,O=KRIBB,L=Daejeon,C=KR"
+
+# REST API 기본 인증(내부 사용자 DB)
+plugins.security.restapi.roles_enabled: ["all_access", "security_rest_api_access"]
+
+# 클러스터 기본 튜닝(요구사항 반영)
+indices.query.bool.max_clause_count: 10000
+search.max_buckets: 50000
+

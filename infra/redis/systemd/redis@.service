@@ -1,0 +1,19 @@
+[Unit]
+Description=Redis In-Memory Data Store (Port %i)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=forking
+User=redis
+Group=redis
+ExecStart=/usr/local/bin/redis-server /etc/redis/redis-%i.conf
+ExecStop=/usr/local/bin/redis-cli -h 127.0.0.1 -p %i -a ${REDIS_PASSWORD} shutdown
+Restart=always
+RestartSec=2
+
+LimitNOFILE=65536
+
+[Install]
+WantedBy=multi-user.target
+

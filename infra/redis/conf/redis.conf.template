@@ -1,0 +1,49 @@
+########################################
+# Redis 7.2 Cluster 공통 설정 템플릿
+# - 노드별로 아래 항목만 수정:
+#   - bind
+#   - cluster-announce-ip
+#   - dir (노드별 디렉토리)
+########################################
+
+# 네트워크
+bind 127.0.0.1 __BIND_IP__
+protected-mode yes
+port 6379
+tcp-keepalive 60
+timeout 300
+
+# Cluster
+cluster-enabled yes
+cluster-config-file nodes-6379.conf
+cluster-node-timeout 5000
+cluster-announce-ip __BIND_IP__
+cluster-announce-port 6379
+cluster-announce-bus-port 16379
+
+# 로그/프로세스
+daemonize yes
+pidfile /var/run/redis/redis-6379.pid
+loglevel notice
+logfile /var/log/redis/redis-6379.log
+
+# 데이터 경로
+dir __DATA_DIR__
+dbfilename dump.rdb
+
+# Persistence (RDB + AOF)
+save 900 1
+save 300 10
+save 60 10000
+appendonly yes
+appendfilename "appendonly.aof"
+appendfsync everysec
+
+# 메모리
+maxmemory 32gb
+maxmemory-policy allkeys-lru
+
+# 보안
+requirepass __REDIS_PASSWORD__
+masterauth __REDIS_PASSWORD__
+
