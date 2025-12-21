@@ -1,0 +1,26 @@
+[Unit]
+Description=Neo4j Graph Database
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=forking
+User=neo4j
+Group=neo4j
+LimitNOFILE=60000
+LimitNPROC=40000
+TimeoutSec=120
+
+Environment=NEO4J_HOME=/var/lib/neo4j
+Environment=NEO4J_CONF=/etc/neo4j
+
+ExecStart=/usr/bin/neo4j start
+ExecStop=/usr/bin/neo4j stop
+ExecReload=/usr/bin/neo4j restart
+
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target
+

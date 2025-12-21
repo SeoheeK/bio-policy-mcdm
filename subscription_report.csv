@@ -1,0 +1,4 @@
+component,feature,requires_subscription,why_needed,workaround_if_no,notes
+Neo4j,Core cluster (Causal Clustering),Yes,"3-Core 클러스터/리더 선출/자동 페일오버 구현","Community는 단일 노드 + 외부 HA(standby/VIP)로만 가능","Enterprise Edition 필요"
+Neo4j,Read Replica,Yes,"읽기 확장 및 읽기 전용 분리","Community는 불가(애플리케이션 레벨 캐시/샤딩 등 대안)","Enterprise Edition 필요"
+Neo4j,neo4j-admin online backup,Yes,"가동 중 백업 및 클러스터 백업 운영","Community는 dump/load 기반 오프라인 백업","버전별 명령 차이 주의"

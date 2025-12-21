@@ -1,0 +1,33 @@
+version: "3.8"
+
+services:
+  qdrant-node-1:
+    image: qdrant/qdrant:v1.7.4
+    container_name: qdrant-node-1
+    restart: always
+    ports:
+      - "10.10.21.60:6333:6333" # HTTP
+      - "10.10.21.60:6334:6334" # gRPC
+      - "10.10.21.60:6335:6335" # P2P
+    volumes:
+      - /data/qdrant/node1:/qdrant/storage
+    environment:
+      - QDRANT__CLUSTER__ENABLED=true
+      - QDRANT__CLUSTER__P2P__PORT=6335
+      - QDRANT__CLUSTER__CONSENSUS__TICK_PERIOD_MS=100
+
+  qdrant-node-2:
+    image: qdrant/qdrant:v1.7.4
+    container_name: qdrant-node-2
+    restart: always
+    ports:
+      - "10.10.21.61:6333:6333"
+      - "10.10.21.61:6334:6334"
+      - "10.10.21.61:6335:6335"
+    volumes:
+      - /data/qdrant/node2:/qdrant/storage
+    environment:
+      - QDRANT__CLUSTER__ENABLED=true
+      - QDRANT__CLUSTER__P2P__PORT=6335
+      - QDRANT__CLUSTER__P2P__BOOTSTRAP__URI=http://10.10.21.60:6335
+
