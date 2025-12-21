@@ -1,0 +1,32 @@
+mode: distributed
+replicas: 4
+
+rootUser: "REPLACE_ME"
+rootPassword: "REPLACE_ME"
+
+persistence:
+  enabled: true
+  storageClass: rook-ceph-block
+  size: 5Ti
+
+resources:
+  requests:
+    cpu: "2"
+    memory: 8Gi
+  limits:
+    cpu: "4"
+    memory: 16Gi
+
+users: []
+
+buckets:
+  - name: bems-data-lake
+    policy: none
+    purge: false
+
+service:
+  type: ClusterIP
+
+consoleService:
+  type: ClusterIP
+
